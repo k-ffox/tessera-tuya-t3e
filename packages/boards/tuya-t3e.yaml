@@ -1,0 +1,159 @@
+
+# Tuya T3E ESP32-S3 — OPI ZIGBEE 4CP WNB v2.4
+# European version, 480x480, ST7701S RGB, GT911 touch
+
+packages:
+  hardware: !include ../hardware/esp32s3-rgb.yaml
+  look: !include ../looks/standard.yaml
+  touch: !include ../features/capacitive-touch.yaml
+  backlight: !include ../features/backlight.yaml
+  camera: !include ../features/camera.yaml
+  self_test: !include ../features/self-test.yaml
+  snapshot: !include ../features/snapshot.yaml
+
+substitutions:
+  BOARD_ID: "tuya-t3e"
+  DEVICE_NAME: "tuya-t3e-new"
+  DEVICE_FRIENDLY_NAME: "My Tuya T3E"
+
+  PANEL_W: "480"
+  PANEL_H: "480"
+  DISPLAY_DPI: "170"
+
+  GRID_COLS: "2"
+  GRID_ROWS: "3"
+
+  SCREEN_MAX_TILES: "128"
+  SCREEN_MAX_PAGES: "24"
+  SCREEN_MAX_BAR_ITEMS: "12"
+  LVGL_BUFFER_SIZE: "25%"
+
+  BACKLIGHT_FREQUENCY: "1000Hz"
+
+esp32:
+  flash_size: 16MB
+
+logger:
+  tx_buffer_size: 2048
+  hardware_uart: UART0
+
+text_sensor:
+  - platform: template
+    name: "Tuya T3E screen type"
+    entity_category: diagnostic
+    update_interval: never
+    lambda: 'return {"tuya-t3e"};'
+
+# T3E display SPI initialization bus
+spi:
+  id: lcd
+  clk_pin:
+    number: GPIO15
+    allow_other_uses: true
+  mosi_pin:
+    number: GPIO48
+    allow_other_uses: true
+
+# GT911 capacitive touch
+i2c:
+  id: touch_bus
+  sda: GPIO7
+  scl: GPIO6
+  scan: true
+
+# Display backlight
+output:
+  - platform: ledc
+    pin: GPIO42
+    id: gpio_backlight_pwm
+    frequency: ${BACKLIGHT_FREQUENCY}
+    min_power: 0.01
+    zero_means_zero: true
+
+# Touchscreen controller
+touchscreen:
+  - platform: gt911
+    id: ts_touch
+    i2c_id: touch_bus
+    display: my_display
+    update_interval: 20ms
+    calibration:
+      x_min: 0
+      x_max: 480
+      y_min: 0
+      y_max: 480
+
+# ST7701S RGB display
+display:
+  - platform: st7701s
+    id: my_display
+    dimensions:
+      width: 480
+      height: 480
+
+    spi_id: lcd
+    spi_mode: MODE3
+    data_rate: 2MHz
+    color_order: RGB
+    invert_colors: true
+
+    cs_pin:
+      number: GPIO4
+      allow_other_uses: true
+
+    de_pin: GPIO40
+    vsync_pin: GPIO39
+    hsync_pin: GPIO38
+    pclk_pin: GPIO41
+    pclk_inverted: false
+
+    hsync_pulse_width: 8
+    hsync_front_porch: 10
+    hsync_back_porch: 50
+
+    vsync_pulse_width: 8
+    vsync_front_porch: 10
+    vsync_back_porch: 20
+
+    pclk_frequency: 12MHz
+
+    reset_pin:
+      number: GPIO4
+      allow_other_uses: true
+
+    data_pins:
+      red: [GPIO8, GPIO18, GPIO17, GPIO16, GPIO0]
+      green: [GPIO13, GPIO12, GPIO11, GPIO10, GPIO9, GPIO3]
+      blue:
+        - number: GPIO15
+          allow_other_uses: true
+        - number: GPIO48
+          allow_other_uses: true
+        - GPIO47
+        - GPIO21
+        - GPIO14
+
+    update_interval: never
+    auto_clear_enabled: false
+
+# Three onboard relays
+switch:
+  - platform: gpio
+    name: "Relay 1"
+    pin:
+      number: GPIO45
+      inverted: false
+      ignore_strapping_warning: true
+
+  - platform: gpio
+    name: "Relay 2"
+    pin:
+      number: GPIO46
+      inverted: false
+      ignore_strapping_warning: true
+
+  - platform: gpio
+    name: "Relay 3"
+    pin:
+      number: GPIO2
+      inverted: false
